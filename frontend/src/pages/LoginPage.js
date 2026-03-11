@@ -3,8 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { AlertCircle, Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2, ArrowRight, Shield, Zap, Globe } from 'lucide-react';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -22,33 +21,17 @@ const LoginPage = () => {
 
     try {
       const user = await login(email, password);
-      
-      // Redirect based on role
       const from = location.state?.from?.pathname;
       if (from) {
         navigate(from);
       } else {
         switch (user.role) {
-          case 'super_admin':
-            navigate('/super-admin');
-            break;
-          case 'business_owner':
-            navigate('/dashboard');
-            break;
-          case 'hr_admin':
-            navigate('/hr');
-            break;
-          case 'finance_admin':
-            navigate('/finance');
-            break;
-          case 'inventory_admin':
-            navigate('/inventory');
-            break;
-          case 'staff':
-            navigate('/staff');
-            break;
-          default:
-            navigate('/dashboard');
+          case 'super_admin': navigate('/super-admin'); break;
+          case 'business_owner': navigate('/dashboard'); break;
+          case 'hr_admin': navigate('/hr'); break;
+          case 'finance_admin': navigate('/finance'); break;
+          case 'staff': navigate('/staff'); break;
+          default: navigate('/dashboard');
         }
       }
     } catch (err) {
@@ -59,70 +42,129 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex bg-obsidian">
-      {/* Left side - Hero Image */}
-      <div className="hidden lg:flex lg:w-2/5 relative">
-        <div 
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1560531008-ab8f46be8c4f?crop=entropy&cs=srgb&fm=jpg&q=85')`,
-          }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-gold-900/80 to-obsidian/90" />
-        <div className="relative z-10 flex flex-col justify-end p-12">
-          <h1 className="font-serif text-4xl text-white mb-4">NexusERP</h1>
-          <p className="text-gray-300 text-lg">
-            Enterprise Resource Planning for Modern Businesses
-          </p>
+    <div className="min-h-screen flex bg-obsidian relative overflow-hidden">
+      {/* Ambient Background */}
+      <div className="absolute inset-0 bg-gradient-mesh pointer-events-none" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-radial from-gold-500/5 via-transparent to-transparent pointer-events-none" />
+      
+      {/* Left Panel - Hero */}
+      <div className="hidden lg:flex lg:w-3/5 relative">
+        {/* Background Image with Overlay */}
+        <div className="absolute inset-0">
+          <img 
+            src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=2000&q=80"
+            alt="Modern Architecture"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-obsidian via-obsidian/95 to-obsidian/70" />
+          <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-transparent to-transparent" />
+        </div>
+        
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-between p-12 w-full">
+          {/* Logo */}
+          <div>
+            <h1 className="font-display text-4xl text-white tracking-tight">
+              Nexus<span className="text-gold">ERP</span>
+            </h1>
+          </div>
+          
+          {/* Hero Text */}
+          <div className="max-w-xl">
+            <h2 className="font-display text-5xl text-white leading-tight mb-6">
+              Enterprise Excellence,<br />
+              <span className="text-gold italic">Simplified.</span>
+            </h2>
+            <p className="text-gray-400 text-lg leading-relaxed mb-10">
+              The next generation of business management. Streamline HR, Finance, 
+              and Operations with India's most sophisticated ERP platform.
+            </p>
+            
+            {/* Feature Pills */}
+            <div className="flex flex-wrap gap-3">
+              {[
+                { icon: Shield, text: 'Bank-Grade Security' },
+                { icon: Zap, text: 'Real-time Analytics' },
+                { icon: Globe, text: 'Multi-Branch Support' },
+              ].map((feature, idx) => (
+                <div 
+                  key={idx}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm"
+                >
+                  <feature.icon className="w-4 h-4 text-gold" strokeWidth={1.5} />
+                  <span className="text-sm text-gray-300">{feature.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* Stats */}
+          <div className="flex gap-12">
+            {[
+              { value: '₹500Cr+', label: 'Managed Monthly' },
+              { value: '10,000+', label: 'Active Users' },
+              { value: '99.9%', label: 'Uptime SLA' },
+            ].map((stat, idx) => (
+              <div key={idx}>
+                <p className="text-3xl font-display text-white">{stat.value}</p>
+                <p className="text-sm text-gray-500 mt-1">{stat.label}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Right side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-8">
+      {/* Right Panel - Login Form */}
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 relative">
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-8">
-            <h1 className="font-serif text-3xl text-gold">NexusERP</h1>
+          <div className="lg:hidden text-center mb-10">
+            <h1 className="font-display text-3xl text-white">
+              Nexus<span className="text-gold">ERP</span>
+            </h1>
           </div>
 
-          <div className="bg-charcoal rounded-lg border border-white/5 p-8">
-            <div className="text-center mb-8">
-              <h2 className="font-serif text-2xl text-white mb-2">Welcome Back</h2>
-              <p className="text-gray-400">Sign in to your account</p>
+          {/* Login Card */}
+          <div className="glass-card rounded-3xl p-8 lg:p-10 animate-fade-in">
+            <div className="text-center mb-10">
+              <h2 className="font-display text-2xl text-white mb-2">Welcome Back</h2>
+              <p className="text-gray-500">Sign in to continue to your dashboard</p>
             </div>
 
             {error && (
-              <div className="mb-6 p-4 bg-error/10 border border-error/20 rounded-md flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-error flex-shrink-0" />
-                <p className="text-error text-sm">{error}</p>
+              <div className="mb-6 p-4 rounded-xl bg-rose/10 border border-rose/20 flex items-center gap-3 animate-scale-in">
+                <AlertCircle className="h-5 w-5 text-rose flex-shrink-0" />
+                <p className="text-rose-light text-sm">{error}</p>
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-300">Email</Label>
+                <label className="block text-sm font-medium text-gray-400 pl-1">
+                  Email Address
+                </label>
                 <Input
-                  id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="you@company.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="bg-midnight border-white/10 text-white placeholder:text-gray-500 focus:border-gold focus:ring-gold"
+                  className="input-premium h-14 text-base"
                   data-testid="login-email-input"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-gray-300">Password</Label>
+                <label className="block text-sm font-medium text-gray-400 pl-1">
+                  Password
+                </label>
                 <Input
-                  id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="bg-midnight border-white/10 text-white placeholder:text-gray-500 focus:border-gold focus:ring-gold"
+                  className="input-premium h-14 text-base"
                   data-testid="login-password-input"
                 />
               </div>
@@ -130,26 +172,49 @@ const LoginPage = () => {
               <Button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gold hover:bg-gold-600 text-black font-medium"
+                className="btn-premium btn-primary w-full h-14 text-base rounded-xl"
                 data-testid="login-submit-btn"
               >
                 {loading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
-                  </>
+                  <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
-                  'Sign In'
+                  <>
+                    Sign In
+                    <ArrowRight className="h-5 w-5 ml-2" />
+                  </>
                 )}
               </Button>
             </form>
 
-            <div className="mt-6 pt-6 border-t border-white/10 text-center">
-              <p className="text-gray-500 text-sm">
-                Demo Credentials: admin@nexuserp.com / Admin123!
-              </p>
+            {/* Divider */}
+            <div className="relative my-8">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/10"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="px-4 text-xs text-gray-600 bg-abyss">Demo Access</span>
+              </div>
+            </div>
+
+            {/* Demo Credentials */}
+            <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1">Super Admin</p>
+                  <p className="text-sm text-gray-300 font-mono">admin@nexuserp.com</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-gray-500 mb-1">Password</p>
+                  <p className="text-sm text-gray-300 font-mono">Admin123!</p>
+                </div>
+              </div>
             </div>
           </div>
+
+          {/* Footer */}
+          <p className="text-center text-gray-600 text-xs mt-8">
+            By signing in, you agree to our Terms of Service and Privacy Policy
+          </p>
         </div>
       </div>
     </div>

@@ -55,9 +55,9 @@ STRIPE_API_KEY = os.environ.get('STRIPE_API_KEY', 'sk_test_emergent')
 
 # Plan pricing
 PLAN_PRICES = {
-    "starter": {"monthly": 29.00, "yearly": 290.00},
-    "growth": {"monthly": 79.00, "yearly": 790.00},
-    "enterprise": {"monthly": 199.00, "yearly": 1990.00}
+    "starter": {"monthly": 2499.00, "yearly": 24990.00},
+    "growth": {"monthly": 6499.00, "yearly": 64990.00},
+    "enterprise": {"monthly": 16499.00, "yearly": 164990.00}
 }
 
 PLAN_LIMITS = {
@@ -124,7 +124,7 @@ class ExtendSubscription(BaseModel):
     duration_days: int
     payment_method: str
     amount: float
-    currency: str = "USD"
+    currency: str = "INR"
     payment_date: str
     reference_number: Optional[str] = None
     notes: Optional[str] = None
@@ -150,7 +150,7 @@ class EmployeeCreate(BaseModel):
     employment_type: str = "full_time"
     start_date: Optional[str] = None
     base_salary: float = 0
-    salary_currency: str = "USD"
+    salary_currency: str = "INR"
     bank_account_number: Optional[str] = None
     bank_name: Optional[str] = None
     national_id: Optional[str] = None
@@ -220,7 +220,7 @@ class InvoiceCreate(BaseModel):
     due_date: str
     payment_terms: Optional[str] = None
     notes: Optional[str] = None
-    currency: str = "USD"
+    currency: str = "INR"
     tax_rate: float = 0
     discount_amount: float = 0
     items: List[dict]
@@ -236,7 +236,7 @@ class ExpenseCreate(BaseModel):
     category: str
     description: Optional[str] = None
     amount: float
-    currency: str = "USD"
+    currency: str = "INR"
     date: str
     receipt_url: Optional[str] = None
 
@@ -1051,7 +1051,7 @@ async def create_business(data: BusinessCreate, current_user: TokenData = Depend
                 "id": payment_id,
                 "business_id": business_id,
                 "amount": data.amount_paid,
-                "currency": "USD",
+                "currency": "INR",
                 "payment_method": data.payment_method,
                 "payment_date": now.date().isoformat(),
                 "duration_days": data.initial_days,
@@ -1158,7 +1158,7 @@ async def create_business(data: BusinessCreate, current_user: TokenData = Depend
                 id=generate_id(),
                 business_id=business_id,
                 amount=data.amount_paid,
-                currency="USD",
+                currency="INR",
                 payment_method=ManualPaymentMethod(data.payment_method),
                 payment_date=now.date(),
                 duration_days=data.initial_days,

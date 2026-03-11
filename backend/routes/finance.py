@@ -45,7 +45,7 @@ class InvoiceCreate(BaseModel):
     due_date: str
     payment_terms: Optional[str] = None
     notes: Optional[str] = None
-    currency: str = "USD"
+    currency: str = "INR"
     tax_rate: float = 0
     discount_amount: float = 0
     items: List[InvoiceItemCreate]
@@ -61,7 +61,7 @@ class ExpenseCreate(BaseModel):
     category: str
     description: Optional[str] = None
     amount: float
-    currency: str = "USD"
+    currency: str = "INR"
     date: str
     receipt_url: Optional[str] = None
 

@@ -41,7 +41,7 @@ class EmployeeCreate(BaseModel):
     employment_type: str = "full_time"
     start_date: Optional[str] = None
     base_salary: float = 0
-    salary_currency: str = "USD"
+    salary_currency: str = "INR"
     bank_account_number: Optional[str] = None
     bank_name: Optional[str] = None
     national_id: Optional[str] = None

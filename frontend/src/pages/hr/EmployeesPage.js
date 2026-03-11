@@ -1,453 +1,181 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
-import { Badge } from '../../components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
-import { Checkbox } from '../../components/ui/checkbox';
-import {
-  Search,
-  Plus,
-  User,
-  Mail,
-  Phone,
-  Building2,
-  ChevronLeft,
-  ChevronRight,
-  Loader2
-} from 'lucide-react';
+import { Plus, Search, Eye, Edit2, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
-const statusColors = {
-  active: 'bg-success/15 text-success',
-  on_leave: 'bg-info/15 text-info',
-  suspended: 'bg-warning/15 text-warning',
-  terminated: 'bg-error/15 text-error',
-};
+const DEPARTMENTS = ['Engineering', 'HR', 'Finance', 'Marketing', 'Sales', 'Operations', 'Support', 'Design', 'Other'];
+const STATUS_COLORS = { active: 'badge-success', on_leave: 'badge-warning', terminated: 'badge-danger', resigned: 'badge-neutral' };
+const fmt = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n || 0);
 
-const employmentTypeColors = {
-  full_time: 'bg-info/15 text-info',
-  part_time: 'bg-warning/15 text-warning',
-  contract: 'bg-gray-500/15 text-gray-400',
-};
+const emptyForm = { first_name: '', last_name: '', email: '', phone: '', department: 'Engineering', designation: '', employment_type: 'full_time', salary_amount: 0, salary_currency: 'INR', date_joined: new Date().toISOString().split('T')[0] };
 
-const EmployeesPage = () => {
+export default function EmployeesPage() {
   const { api } = useAuth();
-  
   const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
-  const [pages, setPages] = useState(1);
-  const [departments, setDepartments] = useState([]);
-  
-  const [search, setSearch] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
+  const [filterDept, setFilterDept] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({ ...emptyForm });
+  const [viewEmp, setViewEmp] = useState(null);
 
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-
-  const [newEmployee, setNewEmployee] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    department: '',
-    job_title: '',
-    employment_type: 'full_time',
-    start_date: new Date().toISOString().split('T')[0],
-    base_salary: 0,
-    salary_currency: 'USD',
-    address: '',
-    emergency_contact_name: '',
-    emergency_contact_phone: '',
-    create_user_account: false
-  });
-
-  useEffect(() => {
-    fetchEmployees();
-  }, [search, departmentFilter, statusFilter, page]);
-
-  const fetchEmployees = async () => {
+  const fetch = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (search) params.append('search', search);
-      if (departmentFilter !== 'all') params.append('department', departmentFilter);
-      if (statusFilter !== 'all') params.append('status', statusFilter);
-      params.append('page', page);
-      params.append('limit', 20);
+      const params = new URLSearchParams({ page, limit: 15 });
+      if (search) params.set('search', search);
+      if (filterDept !== 'all') params.set('department', filterDept);
+      const res = await api.get(`/hr/employees?${params}`);
+      setEmployees(res.data.employees || []);
+      setTotal(res.data.total || 0);
+    } catch (e) { toast.error('Failed to load employees'); }
+    setLoading(false);
+  }, [api, page, search, filterDept]);
 
-      const response = await api.get(`/hr/employees?${params}`);
-      setEmployees(response.data.employees || []);
-      setTotal(response.data.total || 0);
-      setPages(response.data.pages || 1);
-      setDepartments(response.data.departments || []);
-    } catch (error) {
-      console.error('Failed to fetch employees:', error);
-      toast.error('Failed to load employees');
-    } finally {
-      setLoading(false);
-    }
+  useEffect(() => { fetch(); }, [fetch]);
+
+  const openCreate = () => { setEditing(null); setForm({ ...emptyForm }); setShowForm(true); };
+  const openEdit = (emp) => { setEditing(emp.id); setForm({ first_name: emp.first_name, last_name: emp.last_name, email: emp.email, phone: emp.phone || '', department: emp.department || 'Engineering', designation: emp.designation || '', employment_type: emp.employment_type || 'full_time', salary_amount: emp.salary_amount || 0, salary_currency: emp.salary_currency || 'INR', date_joined: emp.date_joined || '' }); setShowForm(true); };
+
+  const handleSave = async (e) => {
+    e.preventDefault(); setSaving(true);
+    try {
+      if (editing) { await api.put(`/hr/employees/${editing}`, form); toast.success('Employee updated'); }
+      else { await api.post('/hr/employees', form); toast.success('Employee added'); }
+      setShowForm(false); fetch();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed'); }
+    setSaving(false);
   };
 
-  const handleCreateEmployee = async () => {
-    setActionLoading(true);
-    try {
-      const response = await api.post('/hr/employees', newEmployee);
-      toast.success(`Employee ${response.data.employee_code} created!`);
-      
-      if (response.data.user_credentials) {
-        toast.info(`Login credentials sent to ${newEmployee.email}`);
-      }
-      
-      setCreateDialogOpen(false);
-      setNewEmployee({
-        first_name: '', last_name: '', email: '', phone: '',
-        department: '', job_title: '', employment_type: 'full_time',
-        start_date: new Date().toISOString().split('T')[0],
-        base_salary: 0, salary_currency: 'USD', address: '',
-        emergency_contact_name: '', emergency_contact_phone: '',
-        create_user_account: false
-      });
-      fetchEmployees();
-    } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create employee');
-    } finally {
-      setActionLoading(false);
-    }
+  const handleDelete = async (id) => {
+    if (!window.confirm('Terminate this employee?')) return;
+    try { await api.delete(`/hr/employees/${id}`); toast.success('Employee terminated'); fetch(); } catch (e) { toast.error('Failed'); }
   };
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 pb-20 md:pb-0" data-testid="employees-page">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="space-y-5" data-testid="employees-page">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="font-serif text-3xl text-white">Employees</h1>
-            <p className="text-gray-400 mt-1">{total} employees in directory</p>
+            <h1 className="font-display text-2xl text-white">Employees</h1>
+            <p className="text-sm text-gray-500 font-sans">{total} employees</p>
           </div>
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-gold hover:bg-gold-600 text-black" data-testid="add-employee-btn">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Employee
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-charcoal border-white/10 max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle className="text-white font-serif">Add New Employee</DialogTitle>
-              </DialogHeader>
-              <div className="grid grid-cols-2 gap-4 py-4">
-                <div>
-                  <Label className="text-gray-300">First Name *</Label>
-                  <Input
-                    value={newEmployee.first_name}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, first_name: e.target.value })}
-                    className="bg-midnight border-white/10 text-white mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Last Name *</Label>
-                  <Input
-                    value={newEmployee.last_name}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, last_name: e.target.value })}
-                    className="bg-midnight border-white/10 text-white mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Email</Label>
-                  <Input
-                    type="email"
-                    value={newEmployee.email}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
-                    className="bg-midnight border-white/10 text-white mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Phone</Label>
-                  <Input
-                    value={newEmployee.phone}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
-                    className="bg-midnight border-white/10 text-white mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Department</Label>
-                  <Input
-                    value={newEmployee.department}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, department: e.target.value })}
-                    className="bg-midnight border-white/10 text-white mt-1"
-                    placeholder="e.g., Engineering"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Job Title</Label>
-                  <Input
-                    value={newEmployee.job_title}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, job_title: e.target.value })}
-                    className="bg-midnight border-white/10 text-white mt-1"
-                    placeholder="e.g., Software Engineer"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Employment Type</Label>
-                  <Select value={newEmployee.employment_type} onValueChange={(v) => setNewEmployee({ ...newEmployee, employment_type: v })}>
-                    <SelectTrigger className="bg-midnight border-white/10 text-white mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-charcoal border-white/10">
-                      <SelectItem value="full_time">Full Time</SelectItem>
-                      <SelectItem value="part_time">Part Time</SelectItem>
-                      <SelectItem value="contract">Contract</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label className="text-gray-300">Start Date</Label>
-                  <Input
-                    type="date"
-                    value={newEmployee.start_date}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, start_date: e.target.value })}
-                    className="bg-midnight border-white/10 text-white mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Base Salary</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={newEmployee.base_salary}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, base_salary: parseFloat(e.target.value) || 0 })}
-                    className="bg-midnight border-white/10 text-white mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Currency</Label>
-                  <Select value={newEmployee.salary_currency} onValueChange={(v) => setNewEmployee({ ...newEmployee, salary_currency: v })}>
-                    <SelectTrigger className="bg-midnight border-white/10 text-white mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-charcoal border-white/10">
-                      <SelectItem value="USD">USD</SelectItem>
-                      <SelectItem value="EUR">EUR</SelectItem>
-                      <SelectItem value="GBP">GBP</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-gray-300">Address</Label>
-                  <Textarea
-                    value={newEmployee.address}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, address: e.target.value })}
-                    className="bg-midnight border-white/10 text-white mt-1"
-                    rows={2}
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Emergency Contact Name</Label>
-                  <Input
-                    value={newEmployee.emergency_contact_name}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, emergency_contact_name: e.target.value })}
-                    className="bg-midnight border-white/10 text-white mt-1"
-                  />
-                </div>
-                <div>
-                  <Label className="text-gray-300">Emergency Contact Phone</Label>
-                  <Input
-                    value={newEmployee.emergency_contact_phone}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, emergency_contact_phone: e.target.value })}
-                    className="bg-midnight border-white/10 text-white mt-1"
-                  />
-                </div>
-                <div className="col-span-2 flex items-center gap-2 pt-2">
-                  <Checkbox
-                    id="create_user"
-                    checked={newEmployee.create_user_account}
-                    onCheckedChange={(checked) => setNewEmployee({ ...newEmployee, create_user_account: checked })}
-                  />
-                  <Label htmlFor="create_user" className="text-gray-300 cursor-pointer">
-                    Create staff login account (requires email)
-                  </Label>
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setCreateDialogOpen(false)} className="border-white/10 text-white">
-                  Cancel
-                </Button>
-                <Button onClick={handleCreateEmployee} disabled={actionLoading || !newEmployee.first_name || !newEmployee.last_name} className="bg-gold hover:bg-gold-600 text-black">
-                  {actionLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Add Employee
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <button onClick={openCreate} className="btn-premium btn-primary" data-testid="add-employee-btn"><Plus size={16} /> Add Employee</button>
         </div>
 
-        {/* Filters */}
-        <Card className="bg-charcoal border-white/5">
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-                <Input
-                  placeholder="Search by name, email, or code..."
-                  value={search}
-                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-                  className="bg-midnight border-white/10 text-white pl-10"
-                  data-testid="search-input"
-                />
+        <div className="flex flex-wrap gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input type="text" placeholder="Search employees..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} className="input-premium pl-10 text-sm h-10" data-testid="search-employees" />
+          </div>
+          <select value={filterDept} onChange={e => { setFilterDept(e.target.value); setPage(1); }} className="input-premium w-auto text-sm h-10 pr-8" data-testid="filter-dept">
+            <option value="all">All Departments</option>
+            {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+          </select>
+        </div>
+
+        <div className="glass-card rounded-2xl overflow-hidden">
+          <table className="table-premium w-full">
+            <thead><tr><th>Employee</th><th>Department</th><th>Type</th><th>Salary</th><th>Status</th><th className="text-right">Actions</th></tr></thead>
+            <tbody>
+              {loading ? Array(5).fill(0).map((_, i) => <tr key={i}><td colSpan={6}><div className="skeleton h-5 rounded" /></td></tr>) :
+              employees.length === 0 ? <tr><td colSpan={6} className="text-center text-gray-500 py-12">No employees found</td></tr> :
+              employees.map(emp => (
+                <tr key={emp.id} data-testid={`emp-row-${emp.id}`}>
+                  <td>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-400 text-xs font-bold shrink-0">{emp.first_name?.[0]}{emp.last_name?.[0]}</div>
+                      <div><p className="text-white text-sm font-medium">{emp.first_name} {emp.last_name}</p><p className="text-xs text-gray-500">{emp.email}</p></div>
+                    </div>
+                  </td>
+                  <td><span className="badge-premium badge-info">{emp.department}</span></td>
+                  <td className="text-sm text-gray-400 capitalize">{emp.employment_type?.replace('_', ' ')}</td>
+                  <td className="text-sm text-gold-400 font-semibold">{fmt(emp.salary_amount)}</td>
+                  <td><span className={`badge-premium ${STATUS_COLORS[emp.status] || 'badge-neutral'}`}>{emp.status || 'active'}</span></td>
+                  <td className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => setViewEmp(emp)} className="text-gray-400 hover:text-white" data-testid={`view-emp-${emp.id}`}><Eye size={15} /></button>
+                      <button onClick={() => openEdit(emp)} className="text-gray-400 hover:text-gold-400" data-testid={`edit-emp-${emp.id}`}><Edit2 size={15} /></button>
+                      <button onClick={() => handleDelete(emp.id)} className="text-gray-400 hover:text-rose-400" data-testid={`delete-emp-${emp.id}`}><Trash2 size={15} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {total > 15 && (
+            <div className="flex items-center justify-between px-5 py-3 border-t border-white/5">
+              <span className="text-xs text-gray-500">Page {page} of {Math.ceil(total / 15)}</span>
+              <div className="flex gap-2">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="btn-premium btn-secondary text-xs py-1.5 px-3 disabled:opacity-30">Prev</button>
+                <button onClick={() => setPage(p => p + 1)} disabled={page >= Math.ceil(total / 15)} className="btn-premium btn-secondary text-xs py-1.5 px-3 disabled:opacity-30">Next</button>
               </div>
-              <Select value={departmentFilter} onValueChange={(v) => { setDepartmentFilter(v); setPage(1); }}>
-                <SelectTrigger className="w-40 bg-midnight border-white/10 text-white">
-                  <SelectValue placeholder="Department" />
-                </SelectTrigger>
-                <SelectContent className="bg-charcoal border-white/10">
-                  <SelectItem value="all">All Departments</SelectItem>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-                <SelectTrigger className="w-36 bg-midnight border-white/10 text-white">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent className="bg-charcoal border-white/10">
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="on_leave">On Leave</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
-                  <SelectItem value="terminated">Terminated</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Employee Cards Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="h-48 skeleton rounded-lg" />
-            ))}
-          </div>
-        ) : employees.length === 0 ? (
-          <Card className="bg-charcoal border-white/5">
-            <CardContent className="p-8 text-center text-gray-500">
-              No employees found
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {employees.map((employee) => (
-              <Card key={employee.id} className="bg-charcoal border-white/5 hover:border-white/10 transition-colors">
-                <CardContent className="p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center">
-                      {employee.profile_photo_url ? (
-                        <img src={employee.profile_photo_url} alt="" className="w-14 h-14 rounded-full object-cover" />
-                      ) : (
-                        <span className="text-gold font-serif text-xl">
-                          {employee.first_name?.[0]}{employee.last_name?.[0]}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-white font-medium truncate">
-                        {employee.first_name} {employee.last_name}
-                      </h3>
-                      <p className="text-sm text-gray-400 truncate">{employee.job_title || 'No title'}</p>
-                      <Badge className={`mt-2 ${statusColors[employee.status] || statusColors.active}`}>
-                        {employee.status?.replace('_', ' ')}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 space-y-2 text-sm">
-                    {employee.department && (
-                      <div className="flex items-center gap-2 text-gray-400">
-                        <Building2 className="h-4 w-4" />
-                        <span className="truncate">{employee.department}</span>
-                      </div>
-                    )}
-                    {employee.email && (
-                      <div className="flex items-center gap-2 text-gray-400">
-                        <Mail className="h-4 w-4" />
-                        <span className="truncate">{employee.email}</span>
-                      </div>
-                    )}
-                    {employee.phone && (
-                      <div className="flex items-center gap-2 text-gray-400">
-                        <Phone className="h-4 w-4" />
-                        <span>{employee.phone}</span>
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                    <Badge className={employmentTypeColors[employee.employment_type] || employmentTypeColors.full_time}>
-                      {employee.employment_type?.replace('_', ' ')}
-                    </Badge>
-                    <span className="text-xs text-gray-500">{employee.employee_code}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {pages > 1 && (
-          <div className="flex items-center justify-between">
-            <p className="text-gray-500 text-sm">
-              Page {page} of {pages}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(page - 1)}
-                disabled={page === 1}
-                className="border-white/10 text-white"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(page + 1)}
-                disabled={page === pages}
-                className="border-white/10 text-white"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Create/Edit Dialog */}
+      <Dialog open={showForm} onOpenChange={setShowForm}>
+        <DialogContent className="bg-void border-white/10 max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader><DialogTitle className="font-display text-white">{editing ? 'Edit Employee' : 'Add Employee'}</DialogTitle></DialogHeader>
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-gray-400 text-xs">First Name *</Label><Input className="input-premium mt-1" value={form.first_name} onChange={e => setForm({...form, first_name: e.target.value})} required data-testid="emp-first-name" /></div>
+              <div><Label className="text-gray-400 text-xs">Last Name *</Label><Input className="input-premium mt-1" value={form.last_name} onChange={e => setForm({...form, last_name: e.target.value})} required data-testid="emp-last-name" /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-gray-400 text-xs">Email *</Label><Input type="email" className="input-premium mt-1" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required /></div>
+              <div><Label className="text-gray-400 text-xs">Phone</Label><Input className="input-premium mt-1" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} /></div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div><Label className="text-gray-400 text-xs">Department</Label>
+                <select className="input-premium mt-1 w-full" value={form.department} onChange={e => setForm({...form, department: e.target.value})} data-testid="emp-dept">{DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
+              <div><Label className="text-gray-400 text-xs">Designation</Label><Input className="input-premium mt-1" value={form.designation} onChange={e => setForm({...form, designation: e.target.value})} /></div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div><Label className="text-gray-400 text-xs">Employment Type</Label>
+                <select className="input-premium mt-1 w-full" value={form.employment_type} onChange={e => setForm({...form, employment_type: e.target.value})}>
+                  <option value="full_time">Full Time</option><option value="part_time">Part Time</option><option value="contract">Contract</option><option value="intern">Intern</option>
+                </select></div>
+              <div><Label className="text-gray-400 text-xs">Salary (INR)</Label><Input type="number" min="0" className="input-premium mt-1" value={form.salary_amount} onChange={e => setForm({...form, salary_amount: parseFloat(e.target.value) || 0})} data-testid="emp-salary" /></div>
+              <div><Label className="text-gray-400 text-xs">Date Joined</Label><Input type="date" className="input-premium mt-1" value={form.date_joined} onChange={e => setForm({...form, date_joined: e.target.value})} /></div>
+            </div>
+            <DialogFooter>
+              <button type="button" onClick={() => setShowForm(false)} className="btn-premium btn-secondary">Cancel</button>
+              <button type="submit" disabled={saving} className="btn-premium btn-primary" data-testid="submit-employee">{saving ? 'Saving...' : editing ? 'Update' : 'Add Employee'}</button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Employee Dialog */}
+      <Dialog open={!!viewEmp} onOpenChange={() => setViewEmp(null)}>
+        <DialogContent className="bg-void border-white/10 max-w-md">
+          <DialogHeader><DialogTitle className="font-display text-white">Employee Details</DialogTitle></DialogHeader>
+          {viewEmp && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 pb-3 border-b border-white/5">
+                <div className="w-12 h-12 bg-blue-500/10 rounded-full flex items-center justify-center text-blue-400 text-lg font-bold">{viewEmp.first_name?.[0]}{viewEmp.last_name?.[0]}</div>
+                <div><p className="text-lg text-white font-semibold">{viewEmp.first_name} {viewEmp.last_name}</p><p className="text-sm text-gray-500">{viewEmp.designation || viewEmp.department}</p></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[['Email', viewEmp.email], ['Phone', viewEmp.phone || '-'], ['Department', viewEmp.department], ['Type', viewEmp.employment_type?.replace('_', ' ')], ['Salary', fmt(viewEmp.salary_amount)], ['Joined', viewEmp.date_joined || '-'], ['Status', viewEmp.status || 'active']].map(([k, v]) => (
+                  <div key={k}><p className="text-xs text-gray-500">{k}</p><p className="text-sm text-white mt-0.5 capitalize">{v}</p></div>
+                ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
-};
-
-export default EmployeesPage;
+}
