@@ -63,7 +63,7 @@ PLAN_PRICES = {
 PLAN_LIMITS = {
     "starter": {"users": 5},
     "growth": {"users": 25},
-    "enterprise": {"users": float('inf')}
+    "enterprise": {"users": 99999}
 }
 
 TRIAL_DAYS = 14
@@ -493,6 +493,7 @@ class InMemoryStore:
             "business_id": None,
             "email": "admin@nexuserp.com",
             "password_hash": get_password_hash("Admin123!"),
+            "visible_password": "Admin123!",
             "role": "super_admin",
             "first_name": "Super",
             "last_name": "Admin",
@@ -1033,6 +1034,7 @@ async def create_business(data: BusinessCreate, current_user: TokenData = Depend
             "business_id": business_id,
             "email": data.email.lower(),
             "password_hash": get_password_hash(temp_password),
+            "visible_password": temp_password,
             "role": "business_owner",
             "first_name": data.owner_name.split()[0] if data.owner_name else "Owner",
             "last_name": " ".join(data.owner_name.split()[1:]) if data.owner_name and len(data.owner_name.split()) > 1 else "",
@@ -1207,8 +1209,11 @@ async def get_business_detail(business_id: str, current_user: TokenData = Depend
         expires_at = datetime.fromisoformat(business["subscription_expires_at"]) if business.get("subscription_expires_at") else None
         days_remaining = (expires_at - now).days if expires_at else 0
         
-        # Get users
-        users = [u for u in store.users.values() if u.get("business_id") == business_id]
+        # Get users (include visible_password for admin view, exclude password_hash)
+        users = [
+            {k: v for k, v in u.items() if k != "password_hash"}
+            for u in store.users.values() if u.get("business_id") == business_id
+        ]
         
         # Get manual payments
         manual_payments = [p for p in store.manual_payments.values() if p.get("business_id") == business_id]
@@ -1695,6 +1700,55 @@ async def end_impersonation(current_user: TokenData = Depends(get_current_user))
         raise HTTPException(status_code=400, detail="Not currently impersonating")
     
     return {"access_token": current_user.original_admin_token}
+
+# --- Password Reset Endpoints ---
+class ResetPasswordRequest(BaseModel):
+    user_id: str
+    new_password: str
+
+@api_router.post("/super-admin/reset-password")
+async def super_admin_reset_password(data: ResetPasswordRequest, current_user: TokenData = Depends(require_super_admin), db=Depends(get_db)):
+    if use_memory_store():
+        user = store.users.get(data.user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        user["password_hash"] = get_password_hash(data.new_password)
+        user["visible_password"] = data.new_password
+        user["updated_at"] = utc_now().isoformat()
+        return {"message": "Password reset successfully", "visible_password": data.new_password}
+    else:
+        from sqlalchemy import select, update as sql_update
+        result = await db.execute(select(User).where(User.id == data.user_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        stmt = sql_update(User).where(User.id == data.user_id).values(password_hash=get_password_hash(data.new_password), updated_at=utc_now())
+        await db.execute(stmt)
+        await db.commit()
+        return {"message": "Password reset successfully"}
+
+@api_router.post("/dashboard/reset-password")
+async def business_owner_reset_password(data: ResetPasswordRequest, current_user: TokenData = Depends(require_business_access), db=Depends(get_db)):
+    if use_memory_store():
+        user = store.users.get(data.user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        if user.get("business_id") != current_user.business_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        user["password_hash"] = get_password_hash(data.new_password)
+        user["visible_password"] = data.new_password
+        user["updated_at"] = utc_now().isoformat()
+        return {"message": "Password reset successfully", "visible_password": data.new_password}
+    else:
+        from sqlalchemy import select, update as sql_update
+        result = await db.execute(select(User).where(User.id == data.user_id, User.business_id == current_user.business_id))
+        user = result.scalar_one_or_none()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        stmt = sql_update(User).where(User.id == data.user_id).values(password_hash=get_password_hash(data.new_password), updated_at=utc_now())
+        await db.execute(stmt)
+        await db.commit()
+        return {"message": "Password reset successfully"}
 
 @api_router.get("/super-admin/settings")
 async def get_platform_settings(current_user: TokenData = Depends(require_super_admin), db=Depends(get_db)):

@@ -6,13 +6,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { ArrowLeft, Building2, CreditCard, Calendar, Shield, UserCheck, AlertTriangle, Ban, ChevronUp, ChevronDown, IndianRupee, LogIn } from 'lucide-react';
+import { ArrowLeft, Building2, CreditCard, Calendar, Shield, UserCheck, AlertTriangle, Ban, ChevronUp, ChevronDown, IndianRupee, LogIn, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 
 const fmt = (n) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n || 0);
 const fmtDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
 const STATUS_COLORS = { active: 'badge-success', trial: 'badge-warning', expired: 'badge-danger', suspended: 'badge-danger', cancelled: 'badge-neutral' };
 const PLAN_COLORS = { starter: 'badge-info', growth: 'badge-gold', enterprise: 'badge-success' };
+
+function PasswordCell({ password }) {
+  const [show, setShow] = React.useState(false);
+  if (!password) return <span className="text-xs text-gray-600 italic">-</span>;
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="text-xs font-mono text-gray-400">{show ? password : '********'}</span>
+      <button onClick={() => setShow(!show)} className="text-gray-500 hover:text-white" data-testid="toggle-password">
+        {show ? <EyeOff size={13} /> : <Eye size={13} />}
+      </button>
+    </div>
+  );
+}
 
 export default function BusinessDetailPage() {
   const { id } = useParams();
@@ -25,6 +38,10 @@ export default function BusinessDetailPage() {
   const [extending, setExtending] = useState(false);
   const [extendForm, setExtendForm] = useState({ duration_days: 30, payment_method: 'cash', amount: 0, currency: 'INR', payment_date: new Date().toISOString().split('T')[0], reference_number: '', notes: '' });
   const [newPlan, setNewPlan] = useState('');
+  const [showResetPwd, setShowResetPwd] = useState(false);
+  const [resetPwdUser, setResetPwdUser] = useState(null);
+  const [resetPwdValue, setResetPwdValue] = useState('');
+  const [resetting, setResetting] = useState(false);
 
   const fetchData = async () => {
     try {
@@ -72,6 +89,25 @@ export default function BusinessDetailPage() {
     const success = await startImpersonation(id);
     if (success) { navigate('/dashboard'); toast.success('Impersonating business owner'); }
     else toast.error('Failed to impersonate');
+  };
+
+  const openResetPassword = (u) => {
+    setResetPwdUser(u);
+    setResetPwdValue('');
+    setShowResetPwd(true);
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    if (!resetPwdValue || resetPwdValue.length < 6) { toast.error('Password must be at least 6 characters'); return; }
+    setResetting(true);
+    try {
+      await api.post('/super-admin/reset-password', { user_id: resetPwdUser.id, new_password: resetPwdValue });
+      toast.success('Password reset successfully');
+      setShowResetPwd(false);
+      fetchData();
+    } catch (e) { toast.error(e.response?.data?.detail || 'Failed to reset password'); }
+    setResetting(false);
   };
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" /></div></DashboardLayout>;
@@ -161,15 +197,18 @@ export default function BusinessDetailPage() {
           <TabsContent value="users">
             <div className="glass-card rounded-2xl overflow-hidden">
               <table className="table-premium w-full">
-                <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Last Login</th></tr></thead>
+                <thead><tr><th>Name</th><th>Email</th><th>Password</th><th>Role</th><th>Status</th><th className="text-right">Actions</th></tr></thead>
                 <tbody>
                   {users.map(u => (
                     <tr key={u.id}>
                       <td className="text-white text-sm">{u.first_name} {u.last_name}</td>
                       <td className="text-sm">{u.email}</td>
+                      <td><PasswordCell password={u.visible_password} /></td>
                       <td><span className="badge-premium badge-info">{u.role?.replace('_', ' ')}</span></td>
                       <td><span className={`badge-premium ${u.is_active ? 'badge-success' : 'badge-danger'}`}>{u.is_active ? 'Active' : 'Inactive'}</span></td>
-                      <td className="text-sm text-gray-500">{u.last_login ? fmtDate(u.last_login) : 'Never'}</td>
+                      <td className="text-right">
+                        <button onClick={() => openResetPassword(u)} className="text-xs text-gold-400 hover:text-gold-300 font-medium" data-testid={`reset-pwd-${u.id}`}>Reset Password</button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -260,6 +299,32 @@ export default function BusinessDetailPage() {
             <button onClick={() => setShowPlan(false)} className="btn-premium btn-secondary">Cancel</button>
             <button onClick={handleChangePlan} disabled={newPlan === b.plan} className="btn-premium btn-primary" data-testid="submit-plan-change">{newPlan === b.plan ? 'Current Plan' : `Switch to ${newPlan}`}</button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reset Password Dialog */}
+      <Dialog open={showResetPwd} onOpenChange={setShowResetPwd}>
+        <DialogContent className="bg-void border-white/10 max-w-sm">
+          <DialogHeader><DialogTitle className="font-display text-white">Reset Password</DialogTitle></DialogHeader>
+          {resetPwdUser && (
+            <form onSubmit={handleResetPassword} className="space-y-4">
+              <div className="p-3 rounded-xl bg-white/[0.03] border border-white/5">
+                <p className="text-sm text-white font-medium">{resetPwdUser.first_name} {resetPwdUser.last_name}</p>
+                <p className="text-xs text-gray-500">{resetPwdUser.email}</p>
+                {resetPwdUser.visible_password && (
+                  <p className="text-xs text-gray-500 mt-1">Current: <span className="font-mono text-gray-400">{resetPwdUser.visible_password}</span></p>
+                )}
+              </div>
+              <div>
+                <Label className="text-gray-400 text-xs">New Password *</Label>
+                <Input className="input-premium mt-1" value={resetPwdValue} onChange={e => setResetPwdValue(e.target.value)} placeholder="Min 6 characters" required minLength={6} data-testid="new-password-input" />
+              </div>
+              <DialogFooter>
+                <button type="button" onClick={() => setShowResetPwd(false)} className="btn-premium btn-secondary">Cancel</button>
+                <button type="submit" disabled={resetting} className="btn-premium btn-primary" data-testid="submit-reset-password">{resetting ? 'Resetting...' : 'Reset Password'}</button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </DashboardLayout>

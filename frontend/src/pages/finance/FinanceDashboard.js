@@ -12,7 +12,7 @@ export default function FinanceDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/finance/dashboard').then(r => setData(r.data)).catch(() => {}).finally(() => setLoading(false));
+    api.get('/finance').then(r => setData(r.data)).catch(() => {}).finally(() => setLoading(false));
   }, [api]);
 
   if (loading) return <DashboardLayout><div className="flex items-center justify-center h-64"><div className="w-8 h-8 border-2 border-gold-500 border-t-transparent rounded-full animate-spin" /></div></DashboardLayout>;

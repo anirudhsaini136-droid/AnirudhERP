@@ -499,3 +499,42 @@ async def update_my_profile(data: ProfileUpdate, current_user: TokenData = Depen
         return {"message": "Profile updated"}
     else:
         return {"message": "Database mode"}
+
+
+# Convenience clock-in / clock-out endpoints
+@router.post("/clock-in")
+async def clock_in(current_user: TokenData = Depends(require_staff_access()), db=Depends(get_db)):
+    return await clock_in_out(action="clock_in", current_user=current_user, db=db)
+
+@router.post("/clock-out")
+async def clock_out(current_user: TokenData = Depends(require_staff_access()), db=Depends(get_db)):
+    return await clock_in_out(action="clock_out", current_user=current_user, db=db)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
+@router.put("/change-password")
+async def change_password(data: ChangePasswordRequest, current_user: TokenData = Depends(require_staff_access()), db=Depends(get_db)):
+    store, use_memory = get_store()
+    
+    if use_memory:
+        from server import get_password_hash, verify_password
+        user = store.users.get(current_user.user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        if not verify_password(data.current_password, user["password_hash"]):
+            raise HTTPException(status_code=400, detail="Current password is incorrect")
+        
+        if len(data.new_password) < 6:
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+        
+        user["password_hash"] = get_password_hash(data.new_password)
+        user["visible_password"] = data.new_password
+        user["updated_at"] = utc_now().isoformat()
+        
+        return {"message": "Password changed successfully"}
+    else:
+        return {"message": "Database mode"}

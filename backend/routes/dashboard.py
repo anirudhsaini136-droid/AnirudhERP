@@ -288,6 +288,7 @@ async def create_admin_user(data: AdminUserCreate, current_user: TokenData = Dep
             "business_id": business_id,
             "email": data.email.lower(),
             "password_hash": get_password_hash(temp_password),
+            "visible_password": temp_password,
             "role": data.role,
             "first_name": data.first_name,
             "last_name": data.last_name,
