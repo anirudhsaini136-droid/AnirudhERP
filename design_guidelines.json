@@ -1,0 +1,139 @@
+{
+  "identity": {
+    "name": "NexusERP",
+    "tone": "Command Center, Executive, Precision, Luxury Utility",
+    "core_philosophy": "The Batman of ERPs. Dark, precise, gold-accented, and incredibly fast.",
+    "visual_archetype": "Jewel & Luxury (Executive Suite)",
+    "audience": "Business Owners, CFOs, HR Directors who value clarity and prestige."
+  },
+  "typography": {
+    "fonts": {
+      "heading": {
+        "family": "Georgia, serif",
+        "usage": "All headings (h1-h6). Use strictly for titles and major metrics.",
+        "weights": "Regular (400) or Bold (700)"
+      },
+      "body": {
+        "family": "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        "usage": "All body text, navigation, data tables, inputs.",
+        "weights": "Regular (400), Medium (500), Semibold (600)"
+      }
+    },
+    "scale": {
+      "h1": "text-4xl md:text-5xl tracking-tight font-serif",
+      "h2": "text-3xl tracking-tight font-serif",
+      "h3": "text-2xl tracking-tight font-serif",
+      "body_lg": "text-lg leading-relaxed",
+      "body_base": "text-base leading-relaxed",
+      "caption": "text-sm text-muted-foreground",
+      "overline": "text-xs uppercase tracking-[0.2em] font-medium text-gold-500/80"
+    }
+  },
+  "colors": {
+    "palette": {
+      "background": "#07090F",
+      "surface": "#0F1420",
+      "card": "#161C2D",
+      "primary": "#C9A84C",
+      "primary_foreground": "#000000",
+      "secondary": "#161C2D",
+      "secondary_foreground": "#FFFFFF",
+      "muted": "#1F2937",
+      "muted_foreground": "#9CA3AF",
+      "accent": "#C9A84C",
+      "accent_foreground": "#000000",
+      "border": "rgba(255,255,255,0.08)",
+      "input": "#0F1420",
+      "ring": "#C9A84C"
+    },
+    "functional": {
+      "success": "#1DB584",
+      "error": "#E8485A",
+      "warning": "#F0A432",
+      "info": "#4A90D9",
+      "gold_dim": "#8A7025"
+    },
+    "tailwind_config_extension": {
+      "colors": {
+        "gold": {
+          "DEFAULT": "#C9A84C",
+          "50": "#FBF7EB",
+          "100": "#F6F0D6",
+          "200": "#EBE0AD",
+          "300": "#E0D085",
+          "400": "#D4C05C",
+          "500": "#C9A84C",
+          "600": "#A98A32",
+          "700": "#7E6625",
+          "800": "#544419",
+          "900": "#2A220C"
+        },
+        "obsidian": "#07090F",
+        "midnight": "#0F1420",
+        "charcoal": "#161C2D"
+      }
+    }
+  },
+  "components": {
+    "general_rules": [
+      "No rounded-xl or rounded-2xl. Use rounded-md (6px) or rounded-lg (8px) maximum for a sharp, professional look.",
+      "Cards must not have heavy shadows. Use 1px borders with low opacity (border-white/5) to define edges.",
+      "Inputs and Selects must have a dark background (#0F1420) and light border (#2D3748).",
+      "Buttons: Primary buttons are GOLD (#C9A84C) with BLACK text. Secondary buttons are Outline (Border Gold) or Ghost.",
+      "Data Visualizations: Use Recharts. Stroke width 2px. Axis lines strictly #2D3748.",
+      "Tables: Header background #0F1420. Row hover #161C2D. Border color #1F2937."
+    ],
+    "shadcn_overrides": {
+      "Card": "bg-[#161C2D] border-white/5 text-white",
+      "Button": "font-medium tracking-wide",
+      "Input": "bg-[#0F1420] border-white/10 focus:border-[#C9A84C] focus:ring-[#C9A84C]",
+      "Select": "bg-[#0F1420] border-white/10"
+    },
+    "layout_strategies": {
+      "dashboard_grid": "grid grid-cols-1 md:grid-cols-12 gap-6 p-6",
+      "sidebar": "w-64 bg-[#0F1420] border-r border-white/5 h-screen sticky top-0 flex flex-col",
+      "mobile_nav": "h-16 bg-[#0F1420] border-t border-white/5 fixed bottom-0 w-full flex justify-around items-center z-50 md:hidden"
+    }
+  },
+  "motion": {
+    "reduced_motion": true,
+    "hover_effects": "transition-colors duration-200",
+    "page_transition": "animate-in fade-in duration-300 slide-in-from-bottom-2",
+    "micro_interactions": "Active states on sidebar items should have a subtle gold glow (bg-gold/10 text-gold)."
+  },
+  "assets": {
+    "logo_strategy": "Text-based logo 'NexusERP' using the Heading Font (Georgia). Gold icon (Abstract Hexagon or N) if needed.",
+    "images": {
+      "login_hero": {
+        "url": "https://images.unsplash.com/photo-1560531008-ab8f46be8c4f?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "alt": "Abstract Luxury Geometric Background",
+        "usage": "Login page full-height side panel"
+      },
+      "avatars": [
+        "https://images.unsplash.com/photo-1603252112050-5ee77b4b4fde?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "https://images.unsplash.com/photo-1589668944320-409833e5ba10?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "https://images.unsplash.com/photo-1599132880549-bffe2907f808?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "https://images.unsplash.com/photo-1712174766230-cb7304feaafe?crop=entropy&cs=srgb&fm=jpg&q=85"
+      ]
+    },
+    "icons": "Use 'lucide-react'. Stroke width 1.5px for elegance. 2px for active states."
+  },
+  "specific_page_instructions": {
+    "login": "Split screen. Left: 40% Width with Image + Gold overlay. Right: Form. Background #07090F.",
+    "super_admin_dashboard": "Header: 'Platform Overview'. Metrics: MRR (Gold), Active Businesses (Sapphire), Churn (Crimson). Table: 'Recent Signups'.",
+    "business_dashboard": "Header: 'Company Performance'. Metrics: Revenue (Gold), Expenses (Crimson), Net Profit (Emerald). Chart: Revenue vs Expenses (Area Chart).",
+    "hr_dashboard": "Header: 'People & Culture'. Metrics: Headcount (Sapphire), On Leave (Amber). Grid: Employee Directory + Leave Requests.",
+    "finance_dashboard": "Header: 'Financial Health'. Metrics: Outstanding Invoices (Amber), Monthly Burn (Crimson). Table: Recent Invoices.",
+    "staff_portal": "Mobile-first focus. Big buttons for 'Clock In' (Emerald) / 'Clock Out' (Crimson). 'My Payslips' list."
+  },
+  "universal_guidelines": [
+    "NEVER use black text on the dark background. Always use white or light grey (#E5E7EB).",
+    "NO gradients on backgrounds. Use solid colors. Texture (noise) is allowed but keep it subtle.",
+    "All monetary values must display 2 decimal places (e.g., $1,250.00).",
+    "Dates must be 'March 10, 2026'.",
+    "Use Skeleton loaders (bg-[#161C2D] animate-pulse) instead of spinners.",
+    "Borders are your friend for separation. 1px border-white/5 is better than a shadow in dark mode.",
+    "Gap strategy: Use gap-6 or gap-8 to let data breathe.",
+    "Don't ask questions. Build based on these specs."
+  ]
+}
